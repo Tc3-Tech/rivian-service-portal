@@ -107,10 +107,10 @@ const Resources = () => {
             <div>
               <h3 className="font-bold text-lg">Required Resources:</h3>
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <a href="#" className="flex items-center p-3 border rounded hover:bg-blue-50">
+                <button className="flex items-center p-3 border rounded hover:bg-blue-50 w-full text-left">
                   <span className="mr-2 text-blue-600">📄</span>
                   Complete Procedure Document
-                </a>
+                </button>
                 <a href="#" className="flex items-center p-3 border rounded hover:bg-blue-50">
                   <span className="mr-2 text-blue-600">⚡</span>
                   RiDE Diagnostics
