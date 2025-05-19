@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/rivian-service-portal/static/css/main.0024462f.css",
+    "main.js": "/rivian-service-portal/static/js/main.b4d32e67.js",
+    "static/js/453.3b4178d2.chunk.js": "/rivian-service-portal/static/js/453.3b4178d2.chunk.js",
+    "index.html": "/rivian-service-portal/index.html",
+    "main.0024462f.css.map": "/rivian-service-portal/static/css/main.0024462f.css.map",
+    "main.b4d32e67.js.map": "/rivian-service-portal/static/js/main.b4d32e67.js.map",
+    "453.3b4178d2.chunk.js.map": "/rivian-service-portal/static/js/453.3b4178d2.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0024462f.css",
+    "static/js/main.b4d32e67.js"
+  ]
+}
