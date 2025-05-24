@@ -1,0 +1,16 @@
+Name,Employee_ID,RIV_Level,Hire_Date,Specialties,Email,Phone,Shift_Start,Shift_End,Current_Workload_Hours,Max_Daily_Hours,Certifications,Notes,Is_Active
+Alex Rodriguez,RIV-001,3,2022-03-15,"Drive Unit, Battery System, Diagnostics",alex.rodriguez@rivian.com,(555) 101-2001,07:00,16:00,6.5,8,"High Voltage, RivianOS, ADAS","Top performer, drive unit specialist",TRUE
+Sarah Johnson,RIV-002,5,2021-01-10,"Battery System, ADAS, Diagnostics, Thermal System, Mentorship",sarah.johnson@rivian.com,(555) 101-2002,06:00,15:00,7.0,8,"High Voltage, RivianOS, ADAS, Thermal Systems, Leadership","Senior mentor, complex diagnostics expert",TRUE
+Michael Chen,RIV-003,2,2023-08-22,"Suspension, Body/Glass, Chassis",michael.chen@rivian.com,(555) 101-2003,07:30,16:30,5.5,8,RivianOS,"Reliable team player, body work specialist",TRUE
+Emma Davis,RIV-004,1,2024-02-01,"Infotainment, Body/Glass",emma.davis@rivian.com,(555) 101-2004,08:00,17:00,4.0,8,RivianOS,"New hire, eager learner, infotainment focus",TRUE
+James Wilson,RIV-005,3,2022-07-18,"Drive Unit, Thermal System, Diagnostics",james.wilson@rivian.com,(555) 101-2005,07:00,16:00,7.5,8,"High Voltage, Thermal Systems","Thermal systems expert, diagnostics certified",TRUE
+Maria Garcia,RIV-006,2,2023-04-12,"Battery System, Suspension, Infotainment",maria.garcia@rivian.com,(555) 101-2006,06:30,15:30,6.0,8,"High Voltage, RivianOS","Bilingual, battery systems focus",TRUE
+David Thompson,RIV-007,1,2024-01-15,"Suspension, Infotainment",david.thompson@rivian.com,(555) 101-2007,08:00,17:00,3.5,8,RivianOS,"Apprentice, suspension training in progress",TRUE
+Lisa Anderson,RIV-008,2,2023-06-05,"ADAS, Infotainment, Body/Glass",lisa.anderson@rivian.com,(555) 101-2008,07:00,16:00,6.5,8,"RivianOS, ADAS","ADAS specialist, electronics background",TRUE
+Kevin Martinez,RIV-009,1,2024-03-10,"Body/Glass, Chassis",kevin.martinez@rivian.com,(555) 101-2009,08:30,17:30,4.5,8,RivianOS,"Body shop background, detail-oriented",TRUE
+Ashley Brown,RIV-010,3,2022-09-20,"Thermal System, Drive Unit, Battery System",ashley.brown@rivian.com,(555) 101-2010,06:30,15:30,7.0,8,"High Voltage, Thermal Systems","Thermal systems lead, mentors RIV 1-2",TRUE
+Ryan Taylor,RIV-011,2,2023-05-30,"Suspension, Chassis, Drive Unit",ryan.taylor@rivian.com,(555) 101-2011,07:30,16:30,5.0,8,RivianOS,"Former automotive tech, fast learner",TRUE
+Jessica Miller,RIV-012,1,2024-04-08,Infotainment,jessica.miller@rivian.com,(555) 101-2012,08:00,17:00,3.0,8,RivianOS,"Recent graduate, tech-savvy",TRUE
+Brandon Lee,RIV-013,2,2023-11-14,"Battery System, ADAS, Infotainment",brandon.lee@rivian.com,(555) 101-2013,07:00,16:00,6.0,8,"High Voltage, ADAS","EV systems specialist, ADAS certified",TRUE
+Nicole White,RIV-014,5,2020-11-05,"All Systems, Diagnostics, Mentorship, Training",nicole.white@rivian.com,(555) 101-2014,06:00,15:00,7.5,8,"High Voltage, RivianOS, ADAS, Thermal Systems, Leadership","Master technician, training coordinator",TRUE
+Christopher Moore,RIV-015,3,2022-12-03,"ADAS, Thermal System, Diagnostics",christopher.moore@rivian.com,(555) 101-2015,07:00,16:00,6.5,8,"ADAS, Thermal Systems","ADAS calibration expert, diagnostic specialist",TRUE

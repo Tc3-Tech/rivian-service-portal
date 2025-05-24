@@ -1,9 +1,268 @@
-// src/pages/Dashboard.jsx - Enhanced with Google Sheets integration
+// src/pages/Dashboard.jsx - Fixed function order
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useUser } from '../components/Layout/Layout';
 import RivianAPIWithSheets from '../services/googleSheetsApi';
 
+// ===== HELPER FUNCTIONS (moved to top) =====
+
+function generateDefaultSkills(rivLevel) {
+  return {
+    'Drive Unit': Math.min(10, 3 + rivLevel * 1.5),
+    'Battery System': Math.min(10, 2 + rivLevel * 1.5),
+    'Suspension': Math.min(10, 3 + rivLevel * 1.2),
+    'Infotainment': Math.min(10, 2 + rivLevel * 1.2),
+    'Body/Glass': Math.min(10, 2 + rivLevel * 1.0),
+    'ADAS': Math.min(10, 1 + rivLevel * 1.3),
+    'Thermal System': Math.min(10, 2 + rivLevel * 1.3),
+    'Chassis': Math.min(10, 2 + rivLevel * 1.0)
+  };
+}
+
+const normalizeTechnicianData = (tech) => {
+  console.log('🔧 Raw technician data from sheets:', tech);
+  
+  // Handle specialties - could be string or array
+  let specialties = [];
+  if (typeof tech.specialties === 'string') {
+    specialties = tech.specialties.split(',').map(s => s.trim()).filter(s => s);
+  } else if (Array.isArray(tech.specialties)) {
+    specialties = tech.specialties;
+  }
+  
+  // Handle efficiency_scores - could be string or object
+  let efficiency_scores = {};
+  if (typeof tech.efficiency_scores === 'string') {
+    try {
+      efficiency_scores = JSON.parse(tech.efficiency_scores);
+    } catch (e) {
+      efficiency_scores = generateDefaultSkills(tech.riv_level);
+    }
+  } else if (typeof tech.efficiency_scores === 'object') {
+    efficiency_scores = tech.efficiency_scores;
+  } else {
+    efficiency_scores = generateDefaultSkills(tech.riv_level);
+  }
+  
+  const normalized = {
+    id: tech.id,
+    name: tech.name || 'Unknown Technician',
+    riv_level: parseInt(tech.riv_level) || 1,
+    specialties: specialties,
+    efficiency_scores: efficiency_scores,
+    type: 'technician'
+  };
+  
+  console.log('✅ Normalized technician:', normalized);
+  return normalized;
+};
+
+// Helper function to normalize work order data
+const normalizeWorkOrderData = (wo) => {
+  // Handle required_skills - could be string or array
+  let required_skills = [];
+  if (typeof wo.required_skills === 'string') {
+    required_skills = wo.required_skills.split(',').map(s => s.trim()).filter(s => s);
+  } else if (Array.isArray(wo.required_skills)) {
+    required_skills = wo.required_skills;
+  }
+  
+  return {
+    ...wo,
+    required_skills: required_skills,
+    required_riv_level: parseInt(wo.required_riv_level) || 1,
+    estimated_hours: parseFloat(wo.estimated_hours) || 2.0
+  };
+};
+
+function generateAllTechnicians() {
+  return [
+    { id: 1, name: 'Alex Rodriguez', riv_level: 3, specialties: ['Drive Unit', 'Battery System'] },
+    { id: 2, name: 'Sarah Johnson', riv_level: 5, specialties: ['Battery System', 'ADAS', 'Diagnostics'] },
+    { id: 3, name: 'Michael Chen', riv_level: 2, specialties: ['Suspension', 'Body/Glass'] },
+    { id: 4, name: 'Emma Davis', riv_level: 1, specialties: ['Infotainment', 'Body/Glass'] },
+    { id: 5, name: 'James Wilson', riv_level: 3, specialties: ['Drive Unit', 'Thermal System'] },
+    { id: 6, name: 'Maria Garcia', riv_level: 2, specialties: ['Battery System', 'Suspension'] },
+    { id: 7, name: 'David Thompson', riv_level: 1, specialties: ['Suspension', 'Infotainment'] },
+    { id: 8, name: 'Lisa Anderson', riv_level: 2, specialties: ['ADAS', 'Infotainment'] },
+    { id: 9, name: 'Kevin Martinez', riv_level: 1, specialties: ['Body/Glass', 'Chassis'] },
+    { id: 10, name: 'Ashley Brown', riv_level: 3, specialties: ['Thermal System', 'Drive Unit'] },
+    { id: 11, name: 'Ryan Taylor', riv_level: 2, specialties: ['Suspension', 'Chassis'] },
+    { id: 12, name: 'Jessica Miller', riv_level: 1, specialties: ['Infotainment'] },
+    { id: 13, name: 'Brandon Lee', riv_level: 2, specialties: ['Battery System', 'ADAS'] },
+    { id: 14, name: 'Nicole White', riv_level: 5, specialties: ['All Systems', 'Diagnostics'] },
+    { id: 15, name: 'Christopher Moore', riv_level: 3, specialties: ['ADAS', 'Thermal System'] }
+  ];
+}
+
+function generateTechnicianDashboard(selectedTech) {
+  const workOrders = generateWorkOrdersForTechnician(selectedTech);
+
+  const technician = {
+    name: selectedTech.name,
+    initials: selectedTech.name.split(' ').map(n => n[0]).join(''),
+    specialty: `${selectedTech.specialties?.join(', ') || 'General'} Specialist`,
+    rivLevel: selectedTech.riv_level,
+    isMentor: selectedTech.riv_level === 5,
+    avgMatchScore: workOrders.length > 0 ? Math.round(workOrders.reduce((sum, wo) => sum + wo.matchScore, 0) / workOrders.length) : 0,
+    matchScoreImprovement: Math.floor(Math.random() * 8) + 2,
+    successRate: Math.round(85 + selectedTech.riv_level * 2 + Math.random() * 5),
+    successTrend: Math.random() > 0.5 ? 'Trending up +3%' : 'Stable performance',
+    efficiency: Math.round(95 + selectedTech.riv_level * 2 + Math.random() * 10),
+    growthScore: Math.round(5 + selectedTech.riv_level + Math.random() * 3),
+    nextLevelProgress: selectedTech.riv_level === 5 ? 'Senior mentor status' : `${Math.round(Math.random() * 40 + 60)}% to RIV ${selectedTech.riv_level + 1}`,
+    skillLevels: generateDefaultSkills(selectedTech.riv_level),
+    skillUtilization: 85 + Math.floor(Math.random() * 10),
+    customerRating: 4.2 + Math.random() * 0.6
+  };
+
+  return {
+    technician,
+    assignedVehicles: workOrders,
+    serviceCenterStats: {
+      teamProgress: 75 + Math.floor(Math.random() * 15),
+      status: 'On track',
+      assigned: 28,
+      total: 32
+    },
+    aiInsights: {
+      summary: generateInsightSummary(selectedTech),
+      overallEfficiency: 85 + Math.floor(Math.random() * 10),
+      skillMatchImprovement: 12 + Math.floor(Math.random() * 8),
+      workloadOptimization: 'Balanced for skill development',
+      keyMetrics: [
+        { label: 'RIV Level Match', value: '94%', description: 'Optimal complexity' },
+        { label: 'Skill Utilization', value: `${technician.skillUtilization}%`, description: 'Using strengths' },
+        { label: 'Growth Ops', value: selectedTech.riv_level < 3 ? '2' : '1', description: 'Learning chances' }
+      ],
+      personalRecommendations: generatePersonalRecommendations(selectedTech)
+    }
+  };
+}
+
+function generateWorkOrdersForTechnician(tech) {
+  const workOrderTypes = [
+    { type: 'Drive Unit Replacement', category: 'remove_replace', riv: 2, hours: 3.5, skills: ['Drive Unit'] },
+    { type: 'Battery System Diagnostic', category: 'diagnostic', riv: 3, hours: 2.0, skills: ['Battery System'] },
+    { type: 'Suspension Calibration', category: 'remove_replace', riv: 1, hours: 2.0, skills: ['Suspension'] },
+    { type: 'Infotainment Update', category: 'remove_replace', riv: 1, hours: 1.0, skills: ['Infotainment'] },
+    { type: 'ADAS Calibration', category: 'remove_replace', riv: 2, hours: 1.5, skills: ['ADAS'] },
+    { type: 'Thermal System Check', category: 'diagnostic', riv: 3, hours: 1.5, skills: ['Thermal System'] }
+  ];
+
+  const suitableWorkOrders = workOrderTypes.filter(wo => {
+    if (wo.category === 'diagnostic' && tech.riv_level < 3) {
+      return false;
+    }
+    return true;
+  });
+
+  const numAssignments = Math.min(4, 2 + Math.floor(Math.random() * 3));
+  const assignments = [];
+
+  for (let i = 0; i < numAssignments; i++) {
+    const wo = suitableWorkOrders[Math.floor(Math.random() * suitableWorkOrders.length)];
+    const skillMatch = tech.specialties?.some(spec => wo.skills.includes(spec));
+    const rivMatch = tech.riv_level >= wo.riv;
+    
+    let matchScore = 70 + Math.random() * 20;
+    if (skillMatch) matchScore += 10;
+    if (rivMatch) matchScore += 5;
+    if (tech.riv_level > wo.riv) matchScore += 3;
+
+    assignments.push({
+      id: `WO-${27490 + i}`,
+      vehicle: `${2023 + Math.floor(Math.random() * 3)} Rivian ${Math.random() > 0.5 ? 'R1T' : 'R1S'}`,
+      repair: wo.type,
+      repairCategory: wo.category,
+      estimatedTime: wo.hours + (Math.random() * 0.5 - 0.25),
+      priority: ['High', 'Medium', 'Low'][Math.floor(Math.random() * 3)],
+      requiredRivLevel: wo.riv,
+      requiredSkills: wo.skills,
+      matchScore: Math.round(Math.min(98, matchScore)),
+      assignmentReason: generateAssignmentReason(tech, wo, skillMatch, rivMatch),
+      growthOpportunity: tech.riv_level < wo.riv || (wo.category === 'diagnostic' && tech.riv_level === 2)
+    });
+  }
+
+  return assignments;
+}
+
+function generateAssignmentReason(tech, wo, skillMatch, rivMatch) {
+  const reasons = [];
+  
+  if (skillMatch) {
+    reasons.push('Perfect skill match');
+  }
+  if (rivMatch && tech.riv_level === wo.riv) {
+    reasons.push('Ideal RIV level');
+  }
+  if (tech.riv_level > wo.riv) {
+    reasons.push('Efficient completion expected');
+  }
+  if (tech.riv_level < wo.riv) {
+    reasons.push('Growth opportunity with mentorship');
+  }
+  if (wo.category === 'diagnostic') {
+    reasons.push('Diagnostic expertise');
+  }
+  
+  return reasons.slice(0, 2).join(', ') || 'Optimal workload balance';
+}
+
+function generateInsightSummary(tech) {
+  if (tech.riv_level === 5) {
+    return 'Senior mentor assignments - complex diagnostics and mentorship opportunities';
+  } else if (tech.riv_level === 3) {
+    return 'Balanced diagnostic and repair assignments for skill advancement';
+  } else if (tech.riv_level === 2) {
+    return 'Mix of efficient repairs and growth-focused challenges';
+  } else {
+    return 'Foundation-building assignments with learning opportunities';
+  }
+}
+
+function generatePersonalRecommendations(tech) {
+  const recommendations = [];
+  
+  if (tech.riv_level < 3) {
+    recommendations.push('Consider diagnostic training to advance to RIV 3');
+  }
+  if (tech.riv_level === 2) {
+    recommendations.push('Strong performance - RIV 3 evaluation recommended');
+  }
+  if (tech.riv_level >= 3 && !tech.specialties?.includes('Battery System')) {
+    recommendations.push('Battery system certification would expand opportunities');
+  }
+  if (tech.riv_level === 5) {
+    recommendations.push('Excellent mentor - consider training program leadership');
+  }
+  
+  recommendations.push('Performance trending positively across all metrics');
+  
+  return recommendations.slice(0, 3);
+}
+
+function generateOptimizedAssignments(currentData) {
+  const optimized = { ...currentData };
+  
+  optimized.assignedVehicles = optimized.assignedVehicles.map(vehicle => ({
+    ...vehicle,
+    matchScore: Math.min(98, vehicle.matchScore + Math.floor(Math.random() * 8) + 3)
+  }));
+  
+  if (optimized.assignedVehicles.length > 0) {
+    optimized.technician.avgMatchScore = Math.round(
+      optimized.assignedVehicles.reduce((sum, v) => sum + v.matchScore, 0) / optimized.assignedVehicles.length
+    );
+  }
+  optimized.technician.matchScoreImprovement += 3;
+  
+  return optimized;
+}
+
+
+// ===== MAIN DASHBOARD COMPONENT =====
 const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, setCurrentUser } = useUser();
@@ -14,6 +273,136 @@ const Dashboard = () => {
   const [selectedReason, setSelectedReason] = useState("");
   const [apiService] = useState(new RivianAPIWithSheets());
   const [dataSource, setDataSource] = useState('mock'); // 'mock' or 'sheets'
+
+
+  const generateRealTechnicianDashboard = async (selectedTech) => {
+  // Normalize the technician data first
+  const normalizedTech = normalizeTechnicianData(selectedTech);
+  
+  // Fetch real work orders from Google Sheets
+  const allWorkOrders = await apiService.fetchWorkOrders();
+  const techWorkOrders = allWorkOrders.filter(wo => 
+    wo.assigned_technician_id === normalizedTech.id || wo.status === 'pending'
+  );
+
+  // Run AI assignment for pending work orders
+  const assignedWorkOrders = await runRealAssignmentLogic(normalizedTech, techWorkOrders);
+
+  const technician = {
+    name: normalizedTech.name,
+    initials: normalizedTech.name.split(' ').map(n => n[0]).join(''),
+    specialty: `${normalizedTech.specialties?.join(', ') || 'General'} Specialist`,
+    rivLevel: normalizedTech.riv_level,
+    isMentor: normalizedTech.riv_level === 5,
+    avgMatchScore: assignedWorkOrders.length > 0 ? 
+      Math.round(assignedWorkOrders.reduce((sum, wo) => sum + wo.matchScore, 0) / assignedWorkOrders.length) : 0,
+    matchScoreImprovement: Math.floor(Math.random() * 8) + 2,
+    successRate: Math.round(85 + normalizedTech.riv_level * 2 + Math.random() * 5),
+    successTrend: Math.random() > 0.5 ? 'Trending up +3%' : 'Stable performance',
+    efficiency: Math.round(95 + normalizedTech.riv_level * 2 + Math.random() * 10),
+    growthScore: Math.round(5 + normalizedTech.riv_level + Math.random() * 3),
+    nextLevelProgress: normalizedTech.riv_level === 5 ? 'Senior mentor status' : 
+      `${Math.round(Math.random() * 40 + 60)}% to RIV ${normalizedTech.riv_level + 1}`,
+    skillLevels: normalizedTech.efficiency_scores || generateDefaultSkills(normalizedTech.riv_level),
+    skillUtilization: 85 + Math.floor(Math.random() * 10),
+    customerRating: 4.2 + Math.random() * 0.6
+  };
+
+  return {
+    technician,
+    assignedVehicles: assignedWorkOrders,
+    serviceCenterStats: {
+      teamProgress: 75 + Math.floor(Math.random() * 15),
+      status: 'On track',
+      assigned: 28,
+      total: 32
+    },
+    aiInsights: {
+      summary: generateInsightSummary(normalizedTech),
+      overallEfficiency: 85 + Math.floor(Math.random() * 10),
+      skillMatchImprovement: 12 + Math.floor(Math.random() * 8),
+      workloadOptimization: 'Balanced for skill development',
+      keyMetrics: [
+        { label: 'RIV Level Match', value: '94%', description: 'Optimal complexity' },
+        { label: 'Skill Utilization', value: `${technician.skillUtilization}%`, description: 'Using strengths' },
+        { label: 'Growth Ops', value: normalizedTech.riv_level < 3 ? '2' : '1', description: 'Learning chances' }
+      ],
+      personalRecommendations: generatePersonalRecommendations(normalizedTech)
+    }
+  };
+};
+
+const runRealAssignmentLogic = async (technician, workOrders) => {
+  console.log('🤖 Running assignment for:', technician.name, 'with specialties:', technician.specialties);
+  
+  // Filter work orders that this technician can handle
+  const suitableOrders = workOrders.filter(wo => {
+    const normalizedWO = normalizeWorkOrderData(wo);
+    
+    // RIV level check
+    if (normalizedWO.repair_category === 'diagnostic' && technician.riv_level < 3) {
+      return false;
+    }
+    if (normalizedWO.required_riv_level > technician.riv_level) {
+      return false;
+    }
+    
+    // Check if technician has required skills - NOW SAFE because specialties is always an array
+    const hasRequiredSkills = normalizedWO.required_skills.length === 0 || 
+      normalizedWO.required_skills.some(skill => technician.specialties.includes(skill));
+    
+    return hasRequiredSkills;
+  });
+
+  // Assign work orders with match scores
+  return suitableOrders.slice(0, 4).map(wo => {
+    const normalizedWO = normalizeWorkOrderData(wo);
+    const skillMatch = normalizedWO.required_skills.some(skill => technician.specialties.includes(skill));
+    const rivMatch = technician.riv_level >= normalizedWO.required_riv_level;
+    
+    let matchScore = 70 + Math.random() * 20;
+    if (skillMatch) matchScore += 15;
+    if (rivMatch) matchScore += 10;
+    if (technician.riv_level > normalizedWO.required_riv_level) matchScore += 5;
+
+    return {
+      id: normalizedWO.order_number,
+      vehicle: `${normalizedWO.vehicle_year} Rivian ${normalizedWO.vehicle_model}`,
+      repair: normalizedWO.repair_type,
+      repairCategory: normalizedWO.repair_category,
+      estimatedTime: normalizedWO.estimated_hours,
+      priority: normalizedWO.priority_level,
+      requiredRivLevel: normalizedWO.required_riv_level,
+      requiredSkills: normalizedWO.required_skills,
+      matchScore: Math.round(Math.min(98, matchScore)),
+      assignmentReason: generateRealAssignmentReason(technician, normalizedWO, skillMatch, rivMatch),
+      growthOpportunity: technician.riv_level < normalizedWO.required_riv_level || 
+        (normalizedWO.repair_category === 'diagnostic' && technician.riv_level === 2)
+    };
+  });
+};
+
+const generateRealAssignmentReason = (tech, wo, skillMatch, rivMatch) => {
+  const reasons = [];
+    
+  if (skillMatch) {
+    reasons.push('Perfect skill match');
+  }
+  if (rivMatch && tech.riv_level === wo.required_riv_level) {
+    reasons.push('Ideal RIV level');
+  }
+  if (tech.riv_level > wo.required_riv_level) {
+    reasons.push('Efficient completion expected');
+  }
+  if (wo.repair_category === 'diagnostic') {
+    reasons.push('Diagnostic expertise');
+  }
+  if (wo.priority_level === 'High') {
+    reasons.push('High priority assignment');
+  }
+    
+  return reasons.slice(0, 2).join(', ') || 'Optimal workload balance';
+};
 
   // Handle URL parameter for technician switching
   useEffect(() => {
@@ -100,127 +489,6 @@ const Dashboard = () => {
     }
   };
 
-  const generateRealTechnicianDashboard = async (selectedTech) => {
-    // Fetch real work orders from Google Sheets
-    const allWorkOrders = await apiService.fetchWorkOrders();
-    const techWorkOrders = allWorkOrders.filter(wo => 
-      wo.assigned_technician_id === selectedTech.id || wo.status === 'pending'
-    );
-
-    // Run AI assignment for pending work orders
-    const assignedWorkOrders = await runRealAssignmentLogic(selectedTech, techWorkOrders);
-
-    const technician = {
-      name: selectedTech.name,
-      initials: selectedTech.name.split(' ').map(n => n[0]).join(''),
-      specialty: `${selectedTech.specialties?.join(', ') || 'General'} Specialist`,
-      rivLevel: selectedTech.riv_level,
-      isMentor: selectedTech.riv_level === 5,
-      avgMatchScore: assignedWorkOrders.length > 0 ? 
-        Math.round(assignedWorkOrders.reduce((sum, wo) => sum + wo.matchScore, 0) / assignedWorkOrders.length) : 0,
-      matchScoreImprovement: Math.floor(Math.random() * 8) + 2,
-      successRate: Math.round(85 + selectedTech.riv_level * 2 + Math.random() * 5),
-      successTrend: Math.random() > 0.5 ? 'Trending up +3%' : 'Stable performance',
-      efficiency: Math.round(95 + selectedTech.riv_level * 2 + Math.random() * 10),
-      growthScore: Math.round(5 + selectedTech.riv_level + Math.random() * 3),
-      nextLevelProgress: selectedTech.riv_level === 5 ? 'Senior mentor status' : 
-        `${Math.round(Math.random() * 40 + 60)}% to RIV ${selectedTech.riv_level + 1}`,
-      skillLevels: selectedTech.efficiency_scores || generateDefaultSkills(selectedTech.riv_level),
-      skillUtilization: 85 + Math.floor(Math.random() * 10),
-      customerRating: 4.2 + Math.random() * 0.6
-    };
-
-    return {
-      technician,
-      assignedVehicles: assignedWorkOrders,
-      serviceCenterStats: {
-        teamProgress: 75 + Math.floor(Math.random() * 15),
-        status: 'On track',
-        assigned: 28,
-        total: 32
-      },
-      aiInsights: {
-        summary: generateInsightSummary(selectedTech),
-        overallEfficiency: 85 + Math.floor(Math.random() * 10),
-        skillMatchImprovement: 12 + Math.floor(Math.random() * 8),
-        workloadOptimization: 'Balanced for skill development',
-        keyMetrics: [
-          { label: 'RIV Level Match', value: '94%', description: 'Optimal complexity' },
-          { label: 'Skill Utilization', value: `${technician.skillUtilization}%`, description: 'Using strengths' },
-          { label: 'Growth Ops', value: selectedTech.riv_level < 3 ? '2' : '1', description: 'Learning chances' }
-        ],
-        personalRecommendations: generatePersonalRecommendations(selectedTech)
-      }
-    };
-  };
-
-  const runRealAssignmentLogic = async (technician, workOrders) => {
-    // Filter work orders that this technician can handle
-    const suitableOrders = workOrders.filter(wo => {
-      // RIV level check
-      if (wo.repair_category === 'diagnostic' && technician.riv_level < 3) {
-        return false;
-      }
-      if (wo.required_riv_level > technician.riv_level) {
-        return false;
-      }
-      
-      // Check if technician has required skills
-      const hasRequiredSkills = wo.required_skills.length === 0 || 
-        wo.required_skills.some(skill => technician.specialties.includes(skill));
-      
-      return hasRequiredSkills;
-    });
-
-    // Assign work orders with match scores
-    return suitableOrders.slice(0, 4).map(wo => {
-      const skillMatch = wo.required_skills.some(skill => technician.specialties.includes(skill));
-      const rivMatch = technician.riv_level >= wo.required_riv_level;
-      
-      let matchScore = 70 + Math.random() * 20;
-      if (skillMatch) matchScore += 15;
-      if (rivMatch) matchScore += 10;
-      if (technician.riv_level > wo.required_riv_level) matchScore += 5;
-
-      return {
-        id: wo.order_number,
-        vehicle: `${wo.vehicle_year} Rivian ${wo.vehicle_model}`,
-        repair: wo.repair_type,
-        repairCategory: wo.repair_category,
-        estimatedTime: wo.estimated_hours,
-        priority: wo.priority_level,
-        requiredRivLevel: wo.required_riv_level,
-        requiredSkills: wo.required_skills,
-        matchScore: Math.round(Math.min(98, matchScore)),
-        assignmentReason: generateRealAssignmentReason(technician, wo, skillMatch, rivMatch),
-        growthOpportunity: technician.riv_level < wo.required_riv_level || 
-          (wo.repair_category === 'diagnostic' && technician.riv_level === 2)
-      };
-    });
-  };
-
-  const generateRealAssignmentReason = (tech, wo, skillMatch, rivMatch) => {
-    const reasons = [];
-    
-    if (skillMatch) {
-      reasons.push('Perfect skill match');
-    }
-    if (rivMatch && tech.riv_level === wo.required_riv_level) {
-      reasons.push('Ideal RIV level');
-    }
-    if (tech.riv_level > wo.required_riv_level) {
-      reasons.push('Efficient completion expected');
-    }
-    if (wo.repair_category === 'diagnostic') {
-      reasons.push('Diagnostic expertise');
-    }
-    if (wo.priority_level === 'High') {
-      reasons.push('High priority assignment');
-    }
-    
-    return reasons.slice(0, 2).join(', ') || 'Optimal workload balance';
-  };
-
   const handleOptimizeAssignments = async () => {
     setOptimizing(true);
     try {
@@ -247,19 +515,6 @@ const Dashboard = () => {
     } finally {
       setOptimizing(false);
     }
-  };
-
-  const generateDefaultSkills = (rivLevel) => {
-    return {
-      'Drive Unit': Math.min(10, 3 + rivLevel * 1.5),
-      'Battery System': Math.min(10, 2 + rivLevel * 1.5),
-      'Suspension': Math.min(10, 3 + rivLevel * 1.2),
-      'Infotainment': Math.min(10, 2 + rivLevel * 1.2),
-      'Body/Glass': Math.min(10, 2 + rivLevel * 1.0),
-      'ADAS': Math.min(10, 1 + rivLevel * 1.3),
-      'Thermal System': Math.min(10, 2 + rivLevel * 1.3),
-      'Chassis': Math.min(10, 2 + rivLevel * 1.0)
-    };
   };
 
   if (loading || !aiData) {
@@ -809,191 +1064,6 @@ const Dashboard = () => {
   );
 };
 
-// Mock data functions for fallback
-function generateAllTechnicians() {
-  return [
-    { id: 1, name: 'Alex Rodriguez', riv_level: 3, specialties: ['Drive Unit', 'Battery System'] },
-    { id: 2, name: 'Sarah Johnson', riv_level: 5, specialties: ['Battery System', 'ADAS', 'Diagnostics'] },
-    { id: 3, name: 'Michael Chen', riv_level: 2, specialties: ['Suspension', 'Body/Glass'] },
-    { id: 4, name: 'Emma Davis', riv_level: 1, specialties: ['Infotainment', 'Body/Glass'] },
-    { id: 5, name: 'James Wilson', riv_level: 3, specialties: ['Drive Unit', 'Thermal System'] },
-    { id: 6, name: 'Maria Garcia', riv_level: 2, specialties: ['Battery System', 'Suspension'] },
-    { id: 7, name: 'David Thompson', riv_level: 1, specialties: ['Suspension', 'Infotainment'] },
-    { id: 8, name: 'Lisa Anderson', riv_level: 2, specialties: ['ADAS', 'Infotainment'] },
-    { id: 9, name: 'Kevin Martinez', riv_level: 1, specialties: ['Body/Glass', 'Chassis'] },
-    { id: 10, name: 'Ashley Brown', riv_level: 3, specialties: ['Thermal System', 'Drive Unit'] },
-    { id: 11, name: 'Ryan Taylor', riv_level: 2, specialties: ['Suspension', 'Chassis'] },
-    { id: 12, name: 'Jessica Miller', riv_level: 1, specialties: ['Infotainment'] },
-    { id: 13, name: 'Brandon Lee', riv_level: 2, specialties: ['Battery System', 'ADAS'] },
-    { id: 14, name: 'Nicole White', riv_level: 5, specialties: ['All Systems', 'Diagnostics'] },
-    { id: 15, name: 'Christopher Moore', riv_level: 3, specialties: ['ADAS', 'Thermal System'] }
-  ];
-}
 
-function generateTechnicianDashboard(selectedTech) {
-  const workOrders = generateWorkOrdersForTechnician(selectedTech);
-
-  const technician = {
-    name: selectedTech.name,
-    initials: selectedTech.name.split(' ').map(n => n[0]).join(''),
-    specialty: `${selectedTech.specialties?.join(', ') || 'General'} Specialist`,
-    rivLevel: selectedTech.riv_level,
-    isMentor: selectedTech.riv_level === 5,
-    avgMatchScore: workOrders.length > 0 ? Math.round(workOrders.reduce((sum, wo) => sum + wo.matchScore, 0) / workOrders.length) : 0,
-    matchScoreImprovement: Math.floor(Math.random() * 8) + 2,
-    successRate: Math.round(85 + selectedTech.riv_level * 2 + Math.random() * 5),
-    successTrend: Math.random() > 0.5 ? 'Trending up +3%' : 'Stable performance',
-    efficiency: Math.round(95 + selectedTech.riv_level * 2 + Math.random() * 10),
-    growthScore: Math.round(5 + selectedTech.riv_level + Math.random() * 3),
-    nextLevelProgress: selectedTech.riv_level === 5 ? 'Senior mentor status' : `${Math.round(Math.random() * 40 + 60)}% to RIV ${selectedTech.riv_level + 1}`,
-    skillLevels: generateDefaultSkills(selectedTech.riv_level),
-    skillUtilization: 85 + Math.floor(Math.random() * 10),
-    customerRating: 4.2 + Math.random() * 0.6
-  };
-
-  return {
-    technician,
-    assignedVehicles: workOrders,
-    serviceCenterStats: {
-      teamProgress: 75 + Math.floor(Math.random() * 15),
-      status: 'On track',
-      assigned: 28,
-      total: 32
-    },
-    aiInsights: {
-      summary: generateInsightSummary(selectedTech),
-      overallEfficiency: 85 + Math.floor(Math.random() * 10),
-      skillMatchImprovement: 12 + Math.floor(Math.random() * 8),
-      workloadOptimization: 'Balanced for skill development',
-      keyMetrics: [
-        { label: 'RIV Level Match', value: '94%', description: 'Optimal complexity' },
-        { label: 'Skill Utilization', value: `${technician.skillUtilization}%`, description: 'Using strengths' },
-        { label: 'Growth Ops', value: selectedTech.riv_level < 3 ? '2' : '1', description: 'Learning chances' }
-      ],
-      personalRecommendations: generatePersonalRecommendations(selectedTech)
-    }
-  };
-}
-
-function generateWorkOrdersForTechnician(tech) {
-  const workOrderTypes = [
-    { type: 'Drive Unit Replacement', category: 'remove_replace', riv: 2, hours: 3.5, skills: ['Drive Unit'] },
-    { type: 'Battery System Diagnostic', category: 'diagnostic', riv: 3, hours: 2.0, skills: ['Battery System'] },
-    { type: 'Suspension Calibration', category: 'remove_replace', riv: 1, hours: 2.0, skills: ['Suspension'] },
-    { type: 'Infotainment Update', category: 'remove_replace', riv: 1, hours: 1.0, skills: ['Infotainment'] },
-    { type: 'ADAS Calibration', category: 'remove_replace', riv: 2, hours: 1.5, skills: ['ADAS'] },
-    { type: 'Thermal System Check', category: 'diagnostic', riv: 3, hours: 1.5, skills: ['Thermal System'] }
-  ];
-
-  const suitableWorkOrders = workOrderTypes.filter(wo => {
-    if (wo.category === 'diagnostic' && tech.riv_level < 3) {
-      return false;
-    }
-    return true;
-  });
-
-  const numAssignments = Math.min(4, 2 + Math.floor(Math.random() * 3));
-  const assignments = [];
-
-  for (let i = 0; i < numAssignments; i++) {
-    const wo = suitableWorkOrders[Math.floor(Math.random() * suitableWorkOrders.length)];
-    const skillMatch = tech.specialties?.some(spec => wo.skills.includes(spec));
-    const rivMatch = tech.riv_level >= wo.riv;
-    
-    let matchScore = 70 + Math.random() * 20;
-    if (skillMatch) matchScore += 10;
-    if (rivMatch) matchScore += 5;
-    if (tech.riv_level > wo.riv) matchScore += 3;
-
-    assignments.push({
-      id: `WO-${27490 + i}`,
-      vehicle: `${2023 + Math.floor(Math.random() * 3)} Rivian ${Math.random() > 0.5 ? 'R1T' : 'R1S'}`,
-      repair: wo.type,
-      repairCategory: wo.category,
-      estimatedTime: wo.hours + (Math.random() * 0.5 - 0.25),
-      priority: ['High', 'Medium', 'Low'][Math.floor(Math.random() * 3)],
-      requiredRivLevel: wo.riv,
-      requiredSkills: wo.skills,
-      matchScore: Math.round(Math.min(98, matchScore)),
-      assignmentReason: generateAssignmentReason(tech, wo, skillMatch, rivMatch),
-      growthOpportunity: tech.riv_level < wo.riv || (wo.category === 'diagnostic' && tech.riv_level === 2)
-    });
-  }
-
-  return assignments;
-}
-
-function generateAssignmentReason(tech, wo, skillMatch, rivMatch) {
-  const reasons = [];
-  
-  if (skillMatch) {
-    reasons.push('Perfect skill match');
-  }
-  if (rivMatch && tech.riv_level === wo.riv) {
-    reasons.push('Ideal RIV level');
-  }
-  if (tech.riv_level > wo.riv) {
-    reasons.push('Efficient completion expected');
-  }
-  if (tech.riv_level < wo.riv) {
-    reasons.push('Growth opportunity with mentorship');
-  }
-  if (wo.category === 'diagnostic') {
-    reasons.push('Diagnostic expertise');
-  }
-  
-  return reasons.slice(0, 2).join(', ') || 'Optimal workload balance';
-}
-
-function generateInsightSummary(tech) {
-  if (tech.riv_level === 5) {
-    return 'Senior mentor assignments - complex diagnostics and mentorship opportunities';
-  } else if (tech.riv_level === 3) {
-    return 'Balanced diagnostic and repair assignments for skill advancement';
-  } else if (tech.riv_level === 2) {
-    return 'Mix of efficient repairs and growth-focused challenges';
-  } else {
-    return 'Foundation-building assignments with learning opportunities';
-  }
-}
-
-function generatePersonalRecommendations(tech) {
-  const recommendations = [];
-  
-  if (tech.riv_level < 3) {
-    recommendations.push('Consider diagnostic training to advance to RIV 3');
-  }
-  if (tech.riv_level === 2) {
-    recommendations.push('Strong performance - RIV 3 evaluation recommended');
-  }
-  if (tech.riv_level >= 3 && !tech.specialties?.includes('Battery System')) {
-    recommendations.push('Battery system certification would expand opportunities');
-  }
-  if (tech.riv_level === 5) {
-    recommendations.push('Excellent mentor - consider training program leadership');
-  }
-  
-  recommendations.push('Performance trending positively across all metrics');
-  
-  return recommendations.slice(0, 3);
-}
-
-function generateOptimizedAssignments(currentData) {
-  const optimized = { ...currentData };
-  
-  optimized.assignedVehicles = optimized.assignedVehicles.map(vehicle => ({
-    ...vehicle,
-    matchScore: Math.min(98, vehicle.matchScore + Math.floor(Math.random() * 8) + 3)
-  }));
-  
-  if (optimized.assignedVehicles.length > 0) {
-    optimized.technician.avgMatchScore = Math.round(
-      optimized.assignedVehicles.reduce((sum, v) => sum + v.matchScore, 0) / optimized.assignedVehicles.length
-    );
-  }
-  optimized.technician.matchScoreImprovement += 3;
-  
-  return optimized;
-}
 
 export default Dashboard;
